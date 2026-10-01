@@ -1,13 +1,9 @@
 package com.mye.knowledgeplatform.controller;
+import org.springframework.web.bind.annotation.*;
 import com.mye.knowledgeplatform.entity.Course;
 import com.mye.knowledgeplatform.mapper.CourseMapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+
 import java.util.List;
 @RestController
 @RequestMapping("/api/course") // 统一前缀
@@ -28,5 +24,25 @@ public class CourseController {
     public String add(@RequestBody Course course) {
         courseMapper.insertCourse(course);
         return "新增成功";
+    }
+    // 删除课程
+    @DeleteMapping("/delete/{id}")
+    public String delete(@PathVariable Integer id) {
+        // 1. 接收受影响的行数
+        int rows = courseMapper.deleteById(id);
+
+        // 2. 判断是否真的删除了
+        if (rows > 0) {
+            return "删除成功";
+        } else {
+            return "删除失败：该课程不存在或已被删除";
+        }
+    }
+
+    // 修改课程
+    @PutMapping("/update")
+    public String update(@RequestBody Course course) {
+        courseMapper.updateCourse(course);
+        return "修改成功";
     }
 }
