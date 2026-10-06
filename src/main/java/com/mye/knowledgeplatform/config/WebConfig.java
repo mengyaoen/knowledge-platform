@@ -23,7 +23,9 @@ public class WebConfig implements WebMvcConfigurer {
                 // 放行登录接口、用户注册接口，否则用户没法登录进来
                 .excludePathPatterns(
                         "/api/user/login",
-                        "/api/user/register" // 预留注册接口
+                        "/api/user/register",
+                        "/api/user/updatePassword",
+                        "/api/user/resetPassword"
                 );
     }
 }

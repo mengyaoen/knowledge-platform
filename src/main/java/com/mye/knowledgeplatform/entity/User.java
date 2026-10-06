@@ -9,5 +9,6 @@ import lombok.Data;
 public class User {
     private Integer id;        // 用户ID（主键）
     private String username;   // 用户名
-    private String password;   // 密码（注意：测试用明文，以后要加密）
+    private String password;// 密码（注意：测试用明文，以后要加密）
+    private String role;// 角色（admin 或 user）
 }
