@@ -6,6 +6,7 @@ import com.mye.knowledgeplatform.mapper.UserMapper;
 import com.mye.knowledgeplatform.utils.JwtUtil; // 导入 JwtUtil
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -21,6 +22,8 @@ public class LoginController {
 
     @Autowired // 注入 JwtUtil
     private JwtUtil jwtUtil;
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate; // 操作Redis的工具
     @PostMapping("/login")
     public Result<Map<String, Object>> login(@RequestBody User user) { // 返回值改为 Result<Map>
         // 1. 根据用户名查询用户
@@ -81,22 +84,48 @@ public class LoginController {
         userMapper.updatePassword(userId, newPassword);
         return Result.success("密码修改成功，请重新登录！");
     }
+
     // ================= 忘记密码（重置密码）接口 =================
     @PostMapping("/resetPassword")
     public Result<Void> resetPassword(@RequestBody Map<String, String> params) {
-        // 1. 获取前端传来的用户名和新密码
         String username = params.get("username");
+        String code = params.get("code"); // 前端传来的验证码
         String newPassword = params.get("newPassword");
 
-        // 2. 校验该用户名是否存在
-        User dbUser = userMapper.findByUsername(username);
-        if (dbUser == null) {
-            return Result.error("该用户名不存在，请检查拼写");
-        }
+        // 从Redis获取验证码
+        String redisCode = stringRedisTemplate.opsForValue().get("code_" + username);
 
-        // 3. 直接覆盖原密码（注意：实际生产环境必须加短信/邮箱验证码！）
+        if (redisCode == null) return Result.error("验证码已过期，请重新发送");
+        if (!redisCode.equals(code)) return Result.error("验证码错误！");
+
+        // 验证通过，修改密码
+        User dbUser = userMapper.findByUsername(username);
         userMapper.updatePassword(dbUser.getId(), newPassword);
+
+        // 【重要】删除Redis中的验证码，防止重复使用
+        stringRedisTemplate.delete("code_" + username);
+
         return Result.success("密码重置成功，请登录");
+    }
+    // ================= 发送验证码接口 =================
+    @PostMapping("/sendCode")
+    public Result<Void> sendCode(@RequestBody Map<String, String> params) {
+        String username = params.get("username");
+        User dbUser = userMapper.findByUsername(username);
+        if (dbUser == null) return Result.error("该用户名不存在");
+
+        // 生成6位随机数字
+        String code = String.valueOf((int)((Math.random() * 9 + 1) * 100000));
+
+        // 存入Redis，设置5分钟过期（核心考点！）
+        stringRedisTemplate.opsForValue().set("code_" + username, code, 5, java.util.concurrent.TimeUnit.MINUTES);
+
+        // 模拟发送短信：在IDEA控制台打印
+        System.out.println("====== 短信验证码 ======");
+        System.out.println("给用户 [" + username + "] 发送验证码：" + code);
+        System.out.println("=======================");
+
+        return Result.success("验证码已发送，请查看控制台");
     }
 
 }
